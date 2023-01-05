@@ -1,0 +1,8 @@
+.idea/
+build/
+cmake-build-debug/
+a.out
+kernel.bin
+test.c
+test.s
+*.o
