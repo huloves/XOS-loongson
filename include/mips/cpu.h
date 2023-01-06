@@ -1,7 +1,7 @@
 #ifndef _MIPS_CPU_H_
 #define _MIPS_CPU_H_
 
-#include <mips/types.h>
+// #include <mips/types.h>
 
 #define KUSEG_ADDR				0x0
 #define CACHED_MEMORY_ADDR		0x80000000
@@ -293,16 +293,16 @@ int	want_resched;	/* resched() was called */
 /*
  * CPU identification, from PRID register.
  */
-union cpuprid {
-	int	cpuprid;
-	struct {
-		/* 小端模式的定义 */
-		u_int	cp_minrev:4;	/* minor revision identifier */
-		u_int	cp_majrev:4;	/* major revision identifier */
-		u_int	cp_imp:8;	/* implementation identifier */
-		u_int	pad1:16;	/* reserved */
-	} cpu;
-};
+// union cpuprid {
+// 	int	cpuprid;
+// 	struct {
+// 		/* 小端模式的定义 */
+// 		u_int	cp_minrev:4;	/* minor revision identifier */
+// 		u_int	cp_majrev:4;	/* major revision identifier */
+// 		u_int	cp_imp:8;	/* implementation identifier */
+// 		u_int	pad1:16;	/* reserved */
+// 	} cpu;
+// };
 
 /*
  * CTL_MACHDEP definitions.

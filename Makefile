@@ -12,12 +12,10 @@ LD = $(CROSS_COMPILE)ld
 
 QEMU = ~/loongson/emu/qemu/build/mips64el-softmmu/qemu-system-mips64el
 
-C_FLAGS = -mabi=32 -mno-abicalls -I ./include/ -c -fno-builtin -fno-stack-protector -nostdinc -fno-pic -gdwarf-2 -g
-LD_FLAGS = -T ./script/ld.script -Map ./build/kernel/map -nostdlib
+C_FLAGS = -mabi=32 -mno-abicalls -D_LOCORE -G 0 -mips3 -fno-strict-aliasing -I ./include/ -c -fno-builtin -fno-stack-protector -nostdinc -fno-pic -gdwarf-2 -g
+LD_FLAGS = -T ./script/ld.script -nostdlib
 
 all: $(S_OBJECTS) $(C_OBJECTS) link
-	@echo $(CC)
-	@echo $(LD)
 
 .c.o:
 	@echo 编译代码文件 $< ...
