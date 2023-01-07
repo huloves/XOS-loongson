@@ -1,5 +1,7 @@
+#include <ls2k/ls2k.h>
 #include <ls2k/regdef.h>
 #include <ls2k/bonito.h>
+#include <ls2k/ns16550.h>
 #include <mips/asm.h>
 #include <mips/cpu.h>
 
@@ -128,7 +130,7 @@ stack = start - 0x4000		/* Place PMON stack below PMON start in RAM */
 	li v0,0xbfff0225
 	li v1,0xff
 	sb v1,(v0)
-
+/*
 #if 1 //fix the hardware poweroff error.
 
 	bal	ls2k_version
@@ -145,7 +147,7 @@ stack = start - 0x4000		/* Place PMON stack below PMON start in RAM */
 
 	lui	t0, 0xba00
 	lui	t1, 0x1fe0
-	sw	t1, 0x1010(t0) /* config bar for APB */
+	sw	t1, 0x1010(t0)
 	lw	t2, 0x1004(t0)
 	ori	t2, t2, 0x2
 	sw	t2, 0x1004(t0)
@@ -164,7 +166,7 @@ stack = start - 0x4000		/* Place PMON stack below PMON start in RAM */
 	sw t2,0x0(t0)
 2:
 #endif
-
+*/
 	/* init processor state at first*/
 /* NOTE!! Not more that 16 instructions here!!! Right now it's FULL! */
 	/* 清零cp0 status寄存器 */
@@ -203,7 +205,6 @@ uncached:
 	nop
 
 initregs:
-	.set noat
         ## init registers
         move    $1, $0
         move    $2, $0
@@ -263,7 +264,368 @@ locate:
 	mtc0	zero, COP_0_CAUSE_REG
 
 cp0_main:
+	.set    mips32
+        mfc0    t0, $15, 1      #EBASE
+        .set    mips3
+        andi    t0, t0, 0x3ff
+        bnez    t0, wait_for_smp
+        nop
 
+	bal watchdog_close
+	nop
+
+	li	t0, 0xbfe10420
+	lw	t2, 0x0(t0)
+	or	t2, 0xc00
+	sw	t2, 0x0(t0)
+
+	lui	t0, 0xba00
+	lui	t1, 0x1fe0
+	sw	t1, 0x1010(t0) /* config bar for APB */
+	lw	t2, 0x1004(t0)
+	ori	t2, t2, 0x2
+	sw	t2, 0x1004(t0)
+
+	bal 	tlb_init
+	nop
+
+#if 1	//xwr pcie signal test
+        li      t0, 0xbfe10000
+
+	li	t1, 0xc2492331
+	sw	t1, 0x580(t0)
+	sw	t1, 0x5a0(t0)
+
+	li	t1, 0xff3ff0a8
+	sw	t1, 0x584(t0)
+	sw	t1, 0x5a4(t0)
+
+	li	t1, 0x27fff
+	sw	t1, 0x588(t0)
+	sw	t1, 0x5a8(t0)
+
+#endif
+/* mtf add for cfg pcie */
+	
+        li      t0, 0xbfe10590
+        dli     t1, 0x14fff1002
+        sd      t1, 0x0(t0)
+        sd      t1, 0x20(t0)
+
+        dli     t1, 0x14fff1102
+        sd      t1, 0x0(t0)
+        sd      t1, 0x20(t0)
+	
+        dli     t1, 0x14fff1202
+        sd      t1, 0x0(t0)
+        sd      t1, 0x20(t0)
+	
+        dli     t1, 0x14fff1302
+        sd      t1, 0x0(t0)
+        sd      t1, 0x20(t0)
+	
+	li	t0, 0xbfe10430
+	lw	t1, 0x0(t0)
+	or	t1, t1, 0x30000	//pcie enable
+	sw	t1, 0x0(t0)
+
+//pcie1 port0
+	dli	t0, 0x900000fe0800680c
+	li	t1, 0xfff9ffff
+        lw      t2, 0x0(t0)
+        and     t1, t1, t2
+	or	t1, 0x20000
+	sw	t1, 0x0(t0)
+
+	dli	t0, 0x900000fe0700681c
+    	lw  t2, 0x0(t0)
+    	li  t1, (0x1 << 26)
+    	or  t2, t1
+    	sw  t2, 0x0(t0)
+
+
+	dli	t0, 0x900000fe00006800
+
+	lw	t1, 0x78(t0)
+	li	t2, ~(0x7 << 12)
+	and	t1, t1, t2
+	li	t2, 0x1000
+	or	t1, t1, t2
+	sw	t1, 0x78(t0)
+
+	li	t1, 0x10000000
+	sw	t1, 0x10(t0)
+
+	dli	t0, 0x9000000000000000
+	li      t1, 0x10000000
+	or	t0, t0, t1
+
+    li  t1, (0x7<<18)|(0x7<<2)
+    not t1, t1
+    lw  t2, 0x54(t0)
+    and t2, t2, t1
+    sw  t2, 0x54(t0)
+
+    lw  t2, 0x58(t0)
+    and t2, t2, t1
+    sw  t2, 0x58(t0)
+
+	dli	t1, 0xff204c | ((PCIE_LANE_FLIP>>(2*4)) & 3)
+        sw      t1, 0x0(t0)
+  
+//pcie1 port1
+	dli	t0, 0x900000fe0800700c
+	li	t1, 0xfff9ffff
+        lw      t2, 0x0(t0)
+        and     t1, t1, t2
+	or	t1, 0x20000
+	sw	t1, 0x0(t0)
+
+	dli	t0, 0x900000fe0700701c
+    lw  t2, 0x0(t0)
+    li  t1, (0x1 << 26)
+    or  t2, t1
+    sw  t2, 0x0(t0)
+
+	dli	t0, 0x900000fe00007000
+
+	lw	t1, 0x78(t0)
+	li	t2, ~(0x7 << 12)
+	and	t1, t1, t2
+	li	t2, 0x1000
+	or	t1, t1, t2
+	sw	t1, 0x78(t0)
+
+	li	t1, 0x10100000
+	sw	t1, 0x10(t0)
+
+	dli	t0, 0x9000000000000000
+	li      t1, 0x10100000
+	or	t0, t0, t1
+
+    li  t1, (0x7<<18)|(0x7<<2)
+    not t1, t1
+    lw  t2, 0x54(t0)
+    and t2, t2, t1
+    sw  t2, 0x54(t0)
+
+    lw  t2, 0x58(t0)
+    and t2, t2, t1
+    sw  t2, 0x58(t0)
+
+	dli	t1, 0xff204c | ((PCIE_LANE_FLIP>>(2*5)) & 3)
+        sw      t1, 0x0(t0)
+  
+//pcie0 port0
+	dli	t0, 0x900000fe0800480c	//other pcie controller
+	li	t1, 0xfff9ffff
+        lw      t2, 0x0(t0)
+        and     t1, t1, t2
+	or	t1, 0x20000
+	sw	t1, 0x0(t0)
+
+	dli	t0, 0x900000fe0700481c
+    lw  t2, 0x0(t0)
+    li  t1, (0x1 << 26)
+    or  t2, t1
+    sw  t2, 0x0(t0)
+
+	dli	t0, 0x900000fe00004800
+
+	lw	t1, 0x78(t0)
+	li	t2, ~(0x7 << 12)
+	and	t1, t1, t2
+	li	t2, 0x1000
+	or	t1, t1, t2
+	sw	t1, 0x78(t0)
+
+li	t1, 0x11000000
+	sw	t1, 0x10(t0)
+
+	dli	t0, 0x9000000000000000
+	li      t1, 0x11000000
+	or	t0, t0, t1
+
+    li  t1, (0x7<<18)|(0x7<<2)
+    not t1, t1
+    lw  t2, 0x54(t0)
+    and t2, t2, t1
+    sw  t2, 0x54(t0)
+
+    lw  t2, 0x58(t0)
+    and t2, t2, t1
+    sw  t2, 0x58(t0)
+
+	dli	t1, 0xff204c | ((PCIE_LANE_FLIP>>(2*0)) & 3)
+        sw      t1, 0x0(t0)
+  
+//pcie0 port1
+	dli	t0, 0x900000fe0800500c	//other pcie controller
+	li	t1, 0xfff9ffff
+        lw      t2, 0x0(t0)
+        and     t1, t1, t2
+	or	t1, 0x20000
+	sw	t1, 0x0(t0)
+
+	dli	t0, 0x900000fe0700501c
+    lw  t2, 0x0(t0)
+    li  t1, (0x1 << 26)
+    or  t2, t1
+    sw  t2, 0x0(t0)
+
+	dli	t0, 0x900000fe00005000
+
+	lw	t1, 0x78(t0)
+	li	t2, ~(0x7 << 12)
+	and	t1, t1, t2
+	li	t2, 0x1000
+	or	t1, t1, t2
+	sw	t1, 0x78(t0)
+
+li	t1, 0x11100000
+	sw	t1, 0x10(t0)
+
+	dli	t0, 0x9000000000000000
+	li      t1, 0x11100000
+	or	t0, t0, t1
+
+    li  t1, (0x7<<18)|(0x7<<2)
+    not t1, t1
+    lw  t2, 0x54(t0)
+    and t2, t2, t1
+    sw  t2, 0x54(t0)
+
+    lw  t2, 0x58(t0)
+    and t2, t2, t1
+    sw  t2, 0x58(t0)
+
+	dli	t1, 0xff204c | ((PCIE_LANE_FLIP>>(2*1)) & 3)
+        sw      t1, 0x0(t0)
+  
+//pcie0 port2
+	dli	t0, 0x900000fe0800580c	//other pcie controller
+	li	t1, 0xfff9ffff
+        lw      t2, 0x0(t0)
+        and     t1, t1, t2
+	or	t1, 0x20000
+	sw	t1, 0x0(t0)
+
+	dli	t0, 0x900000fe00005800
+
+	lw	t1, 0x78(t0)
+	li	t2, ~(0x7 << 12)
+	and	t1, t1, t2
+	li	t2, 0x1000
+	or	t1, t1, t2
+	sw	t1, 0x78(t0)
+
+li	t1, 0x11200000
+	sw	t1, 0x10(t0)
+
+	dli	t0, 0x9000000000000000
+	li      t1, 0x11200000
+	or	t0, t0, t1
+
+    li  t1, (0x7<<18)|(0x7<<2)
+    not t1, t1
+    lw  t2, 0x54(t0)
+    and t2, t2, t1
+    sw  t2, 0x54(t0)
+
+    lw  t2, 0x58(t0)
+    and t2, t2, t1
+    sw  t2, 0x58(t0)
+
+	dli	t1, 0xff204c | ((PCIE_LANE_FLIP>>(2*2)) & 3) 
+        sw      t1, 0x0(t0)
+  
+//pcie0 port3
+	dli	t0, 0x900000fe0800600c	//other pcie controller
+	li	t1, 0xfff9ffff
+        lw      t2, 0x0(t0)
+        and     t1, t1, t2
+	or	t1, 0x20000
+	sw	t1, 0x0(t0)
+
+	dli	t0, 0x900000fe00006000
+
+	lw	t1, 0x78(t0)
+	li	t2, ~(0x7 << 12)
+	and	t1, t1, t2
+	li	t2, 0x1000
+	or	t1, t1, t2
+	sw	t1, 0x78(t0)
+
+	li	t1, 0x11300000
+	sw	t1, 0x10(t0)
+
+	dli	t0, 0x9000000000000000
+	li      t1, 0x11300000
+	or	t0, t0, t1
+
+    	li  t1, (0x7<<18)|(0x7<<2)
+    	not t1, t1
+    	lw  t2, 0x54(t0)
+    	and t2, t2, t1
+    	sw  t2, 0x54(t0)
+
+    lw  t2, 0x58(t0)
+    and t2, t2, t1
+    sw  t2, 0x58(t0)
+
+	dli	t1, 0xff204c | ((PCIE_LANE_FLIP>>(2*3)) & 3)
+        sw      t1, 0x0(t0)
+
+pcie_cfg_done:
+	bal	initserial
+	nop
+
+	PRINTSTR("\r\ninitserial good ^_^...\r\n")
+	nop
+
+	bal	ls2k_version
+	nop
+	bnez	v0,2f
+	nop
+
+2:
+	bal 	initserial_later
+	nop
+
+	bal	ls2k_version
+	nop
+
+2:
+
+.global wait_for_smp;
+.global wait_for_smp_call;
+wait_for_smp:
+	bal 	tlb_init
+	nop
+	mfc0	t1, CP0_CONFIG
+	ori	t1, t1, 0x3
+	mtc0	t1, CP0_CONFIG
+	la	t1, 1f
+	addu	t1, s0
+	li	v0, 0x9fffffff
+	and	t1, v0
+	jr	t1
+	nop
+1:
+	li	t0, 0xbfe11120
+	sd	zero, 0(t0)
+	sd	t1, 8(t0)
+
+wait_for_smp_call:
+1:
+	ld	t1, 0(t0)
+	beqz	t1, 1b
+	ld	sp, 8(t0)
+	sd	zero,0(t0)
+	ld	gp, 16(t0)
+
+	jr	t1
+	nop
 
 LEAF(ls2k_version)
 	.set    mips32
@@ -288,3 +650,151 @@ LEAF(ls2k_version)
 2:
 	j	ra
 	nop
+
+LEAF(tlb_init)
+        mtc0    $0, CP0_WIRED
+        mtc0    $0, CP0_PAGEMASK
+tlb_flush_all:
+        lui     a0, 0x8000
+        addiu   a1, $0, 64
+        #a0=KSEG0,a1 = tlbsize, v0, v1, a3 used as local registers
+        mtc0    $0, CP0_ENTRYLO0
+        mtc0    $0, CP0_ENTRYLO1
+        mfc0    v0, CP0_WIRED
+        addu    v1, $0, a0
+1:      sltu    a3, v0, a1
+        beq     a3, $0, 1f
+        nop
+        mtc0    v1, CP0_ENTRYHI
+        mtc0    v0, CP0_INDEX
+        tlbwi
+        addiu   v1, v1, 0x2000
+        beq     $0, $0, 1b
+        addiu   v0, v0, 1
+1:
+        ###tlb_init finish####
+        tlbp
+	jr ra
+	nop
+END(tlb_init)
+
+LEAF(watchdog_close)
+	//disable watch DOG.
+	/*gpio 3 output zero*/
+	li t1,0xbfe10500
+
+	li t2,(1 << 3)
+	not t2,t2
+	lw t3,0x0(t1)
+	and t2,t3
+	sw t2,0x0(t1)
+
+	li t2,(1 << 3)
+	lw t3,0x10(t1)
+	not t2,t2
+	and t2,t3
+	sw t2,0x10(t1)
+	nop
+
+	jr		ra
+	nop
+END(watchdog_close)
+
+LEAF(initserial)
+	.set noat
+	move 	AT,ra
+
+#if 1   //mtf add
+	li	a0, COM1_BASE_ADDR
+	li	t1, CFCR_DLAB
+	sb	t1, NSREG(NS16550_CFCR)(a0)
+
+	li	t1, 0
+	sb	t1, 1(a0)
+	li	t1, 0x36	# divider, highest possible baud rate
+	sb	t1, 0(a0)
+
+1:
+	lb	a1, 0(a0)
+	bne	a1, t1, 1b
+	nop
+
+	li	t1, 3	#CFCR_8BITS
+	sb	t1, 3(a0)	#NSREG(NS16550_CFCR)(v0)
+
+	li	t1, 71
+	sb	t1, 2(a0)
+#endif
+ 
+        j       ra
+        nop
+	.set at
+END(initserial)
+
+LEAF(initserial_later)
+	.set noat
+	move 	AT,ra
+
+#if 1   //mtf add
+	li	a0, COM1_BASE_ADDR
+	li	t1, CFCR_DLAB
+	sb	t1, NSREG(NS16550_CFCR)(a0)
+
+	li	t1, 0
+	sb	t1, 1(a0)
+	li	t1, 68	# divider, highest possible baud rate
+	sb	t1, 0(a0)
+
+1:
+	lb	a1, 0(a0)
+	bne	a1, t1, 1b
+	nop
+
+	li	t1, 3	#CFCR_8BITS
+	sb	t1, 3(a0)	#NSREG(NS16550_CFCR)(v0)
+
+	li	t1, 71
+	sb	t1, 2(a0)
+#endif
+ 
+        j       ra
+        nop
+	.set at
+END(initserial_later)
+
+LEAF(stringserial)
+	move	a2, ra
+	addu	a1, a0, s0
+	lbu	a0, 0(a1)
+1:
+	beqz	a0, 2f
+	nop
+	bal	tgt_putchar
+	addiu	a1, 1
+	b	1b
+	lbu	a0, 0(a1)
+2:
+	j	a2
+	nop
+END(stringserial)
+
+LEAF(tgt_putchar)
+	.set noat
+	move	AT, ra
+	la	v0, COM1_BASE_ADDR
+	bal	1f
+	nop
+	jr	AT
+	nop
+  
+1:
+	lbu	v1, NSREG(NS16550_LSR)(v0)
+	and	v1, LSR_TXRDY
+	beqz	v1, 1b
+	nop
+						 
+	sb	a0, NSREG(NS16550_DATA)(v0)
+	j	ra
+	nop
+	.set at
+END(tgt_putchar)
