@@ -3,19 +3,19 @@
 
 // #include <mips/types.h>
 
-#define KUSEG_ADDR				0x0
+#define KUSEG_ADDR			0x0
 #define CACHED_MEMORY_ADDR		0x80000000
-#define UNCACHED_MEMORY_ADDR	0xa0000000
-#define KSEG2_ADDR				0xc0000000
+#define UNCACHED_MEMORY_ADDR		0xa0000000
+#define KSEG2_ADDR			0xc0000000
 #define MAX_MEM_ADDR			0xbe000000
 #define	RESERVED_ADDR			0xbfc80000
 
 #define	CACHED_TO_PHYS(x)		((unsigned)(x) & 0x1fffffff)
 #define	PHYS_TO_CACHED(x)		((unsigned)(x) | CACHED_MEMORY_ADDR)
-#define	UNCACHED_TO_PHYS(x) 	((unsigned)(x) & 0x1fffffff)
-#define	PHYS_TO_UNCACHED(x) 	((unsigned)(x) | UNCACHED_MEMORY_ADDR)
+#define	UNCACHED_TO_PHYS(x) 		((unsigned)(x) & 0x1fffffff)
+#define	PHYS_TO_UNCACHED(x) 		((unsigned)(x) | UNCACHED_MEMORY_ADDR)
 #define VA_TO_CINDEX(x) 		((unsigned)(x) & 0xffffff | CACHED_MEMORY_ADDR)
-#define	CACHED_TO_UNCACHED(x)	(PHYS_TO_UNCACHED(CACHED_TO_PHYS(x)))
+#define	CACHED_TO_UNCACHED(x)		(PHYS_TO_UNCACHED(CACHED_TO_PHYS(x)))
 
 /*
  * The bits in the cause register.
@@ -37,25 +37,25 @@
 #define SR_COP_USABILITY	0xf0000000
 #define SR_COP_0_BIT		0x10000000
 #define SR_COP_1_BIT		0x20000000
-#define SR_RP				0x08000000
-#define SR_FR_32			0x04000000
-#define SR_RE				0x02000000
+#define SR_RP			0x08000000
+#define SR_FR_32		0x04000000
+#define SR_RE			0x02000000
 #define SR_BOOT_EXC_VEC		0x00400000
 #define SR_TLB_SHUTDOWN		0x00200000
 #define SR_SOFT_RESET		0x00100000
-#define SR_DIAG_CH			0x00040000
-#define SR_DIAG_CE			0x00020000
-#define SR_DIAG_DE			0x00010000
-#define SR_KX				0x00000080
-#define SR_SX				0x00000040
-#define SR_UX				0x00000020
-#define SR_KSU_MASK			0x00000018
-#define SR_KSU_USER			0x00000010
+#define SR_DIAG_CH		0x00040000
+#define SR_DIAG_CE		0x00020000
+#define SR_DIAG_DE		0x00010000
+#define SR_KX			0x00000080
+#define SR_SX			0x00000040
+#define SR_UX			0x00000020
+#define SR_KSU_MASK		0x00000018
+#define SR_KSU_USER		0x00000010
 #define SR_KSU_SUPER		0x00000008
 #define SR_KSU_KERNEL		0x00000000
-#define SR_ERL				0x00000004
-#define SR_EXL				0x00000002
-#define SR_INT_ENAB			0x00000001
+#define SR_ERL			0x00000004
+#define SR_EXL			0x00000002
+#define SR_INT_ENAB		0x00000001
 /*#define SR_INT_MASK		0x0000ff00*/
 
 /*
@@ -105,19 +105,19 @@
 #define COP_0_TLB_PG_MASK	$5
 #define COP_0_TLB_WIRED		$6
 #define COP_0_BAD_VADDR		$8
-#define COP_0_COUNT			$9
+#define COP_0_COUNT		$9
 #define COP_0_TLB_HI		$10
 #define COP_0_COMPARE		$11
 #define COP_0_STATUS_REG	$12
 #define COP_0_CAUSE_REG		$13
 #define COP_0_EXC_PC		$14
-#define COP_0_PRID			$15
+#define COP_0_PRID		$15
 #define COP_0_CONFIG		$16
 #define COP_0_LLADDR		$17
 #define COP_0_WATCH_LO		$18
 #define COP_0_WATCH_HI		$19
 #define COP_0_TLB_XCONTEXT	$20
-#define COP_0_ECC			$26
+#define COP_0_ECC		$26
 #define COP_0_CACHE_ERR		$27
 #define COP_0_TAG_LO		$28
 #define COP_0_TAG_HI		$29
@@ -129,14 +129,14 @@
 #define COP_0_PC_COUNT		$25
 #define COP_0_PC_CTRL		$22
 
-#define	COP_0_ICR			$20		/* CFC */
+#define	COP_0_ICR		$20		/* CFC */
 #define	COP_0_DERR_0		$26		/* CFC */
 #define	COP_0_DERR_1		$27		/* CFC */
 
 /*
  * Values for the code field in a break instruction.
  */
-#define BREAK_INSTR			0x0000000d
+#define BREAK_INSTR		0x0000000d
 #define BREAK_VAL_MASK		0x03ff0000
 #define BREAK_VAL_SHIFT		16
 #define BREAK_KDB_VAL		512
@@ -165,39 +165,39 @@
 /*
  * The floating point coprocessor status register bits.
  */
-#define FPC_ROUNDING_BITS			0x00000003
-#define FPC_ROUND_RN				0x00000000
-#define FPC_ROUND_RZ				0x00000001
-#define FPC_ROUND_RP				0x00000002
-#define FPC_ROUND_RM				0x00000003
-#define FPC_STICKY_BITS				0x0000007c
-#define FPC_STICKY_INEXACT			0x00000004
+#define FPC_ROUNDING_BITS		0x00000003
+#define FPC_ROUND_RN			0x00000000
+#define FPC_ROUND_RZ			0x00000001
+#define FPC_ROUND_RP			0x00000002
+#define FPC_ROUND_RM			0x00000003
+#define FPC_STICKY_BITS			0x0000007c
+#define FPC_STICKY_INEXACT		0x00000004
 #define FPC_STICKY_UNDERFLOW		0x00000008
-#define FPC_STICKY_OVERFLOW			0x00000010
-#define FPC_STICKY_DIV0				0x00000020
-#define FPC_STICKY_INVALID			0x00000040
-#define FPC_ENABLE_BITS				0x00000f80
-#define FPC_ENABLE_INEXACT			0x00000080
+#define FPC_STICKY_OVERFLOW		0x00000010
+#define FPC_STICKY_DIV0			0x00000020
+#define FPC_STICKY_INVALID		0x00000040
+#define FPC_ENABLE_BITS			0x00000f80
+#define FPC_ENABLE_INEXACT		0x00000080
 #define FPC_ENABLE_UNDERFLOW		0x00000100
-#define FPC_ENABLE_OVERFLOW			0x00000200
-#define FPC_ENABLE_DIV0				0x00000400
-#define FPC_ENABLE_INVALID			0x00000800
-#define FPC_EXCEPTION_BITS			0x0003f000
+#define FPC_ENABLE_OVERFLOW		0x00000200
+#define FPC_ENABLE_DIV0			0x00000400
+#define FPC_ENABLE_INVALID		0x00000800
+#define FPC_EXCEPTION_BITS		0x0003f000
 #define FPC_EXCEPTION_INEXACT		0x00001000
 #define FPC_EXCEPTION_UNDERFLOW		0x00002000
 #define FPC_EXCEPTION_OVERFLOW		0x00004000
-#define FPC_EXCEPTION_DIV0			0x00008000
+#define FPC_EXCEPTION_DIV0		0x00008000
 #define FPC_EXCEPTION_INVALID		0x00010000
 #define FPC_EXCEPTION_UNIMPL		0x00020000
-#define FPC_COND_BIT				0x00800000
-#define FPC_FLUSH_BIT				0x01000000
-#define FPC_MBZ_BITS				0xfe7c0000
+#define FPC_COND_BIT			0x00800000
+#define FPC_FLUSH_BIT			0x01000000
+#define FPC_MBZ_BITS			0xfe7c0000
 
 /*
  * Constants to determine if have a floating point instruction.
  */
 #define OPCODE_SHIFT		26
-#define OPCODE_C1			0x11
+#define OPCODE_C1		0x11
 
 /*
  * The low part of the TLB entry.

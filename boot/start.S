@@ -130,7 +130,7 @@ stack = start - 0x4000		/* Place PMON stack below PMON start in RAM */
 	li v0,0xbfff0225
 	li v1,0xff
 	sb v1,(v0)
-/*
+
 #if 1 //fix the hardware poweroff error.
 
 	bal	ls2k_version
@@ -147,7 +147,7 @@ stack = start - 0x4000		/* Place PMON stack below PMON start in RAM */
 
 	lui	t0, 0xba00
 	lui	t1, 0x1fe0
-	sw	t1, 0x1010(t0)
+	sw	t1, 0x1010(t0) /* config bar for APB */
 	lw	t2, 0x1004(t0)
 	ori	t2, t2, 0x2
 	sw	t2, 0x1004(t0)
@@ -166,7 +166,7 @@ stack = start - 0x4000		/* Place PMON stack below PMON start in RAM */
 	sw t2,0x0(t0)
 2:
 #endif
-*/
+
 	/* init processor state at first*/
 /* NOTE!! Not more that 16 instructions here!!! Right now it's FULL! */
 	/* 清零cp0 status寄存器 */
@@ -198,6 +198,9 @@ stack = start - 0x4000		/* Place PMON stack below PMON start in RAM */
 	li  t0, 0xbfff0220
 	li  t1, 0x47
 	sb  t1, 0x4(t0)   /* 设置spi参数控制寄存器，时钟分频数设置为4，快速读模式，连续地址读模式，SPI flash读使能*/
+
+	bal	locate			/* Get current execute address */
+	nop
 
 uncached:
 	or	ra, UNCACHED_MEMORY_ADDR
@@ -254,6 +257,7 @@ initregs:
  *  location into ra. Check to see if we run from ROM or if this is ramloaded.
  */
 locate:
+
 	la	s0, uncached
 	subu	s0, ra, s0
 
@@ -338,10 +342,10 @@ cp0_main:
 	sw	t1, 0x0(t0)
 
 	dli	t0, 0x900000fe0700681c
-    	lw  t2, 0x0(t0)
-    	li  t1, (0x1 << 26)
-    	or  t2, t1
-    	sw  t2, 0x0(t0)
+    lw  t2, 0x0(t0)
+    li  t1, (0x1 << 26)
+    or  t2, t1
+    sw  t2, 0x0(t0)
 
 
 	dli	t0, 0x900000fe00006800
@@ -353,6 +357,13 @@ cp0_main:
 	or	t1, t1, t2
 	sw	t1, 0x78(t0)
 
+#if defined(FORCE_PCIE_GEN1) && FORCE_PCIE_GEN1 & 0x10
+//pcie capability link control 2, target link speed(bit 3:0)
+    lw 	    t1, 0xa0(t0)
+    or	    t1, 3
+    xor     t1, 2
+    sw      t1, 0xa0(t0)
+#endif
 	li	t1, 0x10000000
 	sw	t1, 0x10(t0)
 
@@ -396,6 +407,13 @@ cp0_main:
 	or	t1, t1, t2
 	sw	t1, 0x78(t0)
 
+#if defined(FORCE_PCIE_GEN1) && FORCE_PCIE_GEN1 & 0x20
+//pcie capability link control 2, target link speed(bit 3:0)
+    lw 	    t1, 0xa0(t0)
+    or	    t1, 3
+    xor     t1, 2
+    sw      t1, 0xa0(t0)
+#endif
 	li	t1, 0x10100000
 	sw	t1, 0x10(t0)
 
@@ -439,7 +457,14 @@ cp0_main:
 	or	t1, t1, t2
 	sw	t1, 0x78(t0)
 
-li	t1, 0x11000000
+#if defined(FORCE_PCIE_GEN1) && FORCE_PCIE_GEN1 & 1
+//pcie capability link control 2, target link speed(bit 3:0)
+    lw 	    t1, 0xa0(t0)
+    or	    t1, 3
+    xor     t1, 2
+    sw      t1, 0xa0(t0)
+#endif
+	li	t1, 0x11000000
 	sw	t1, 0x10(t0)
 
 	dli	t0, 0x9000000000000000
@@ -482,7 +507,14 @@ li	t1, 0x11000000
 	or	t1, t1, t2
 	sw	t1, 0x78(t0)
 
-li	t1, 0x11100000
+#if defined(FORCE_PCIE_GEN1) && FORCE_PCIE_GEN1 & 2
+//pcie capability link control 2, target link speed(bit 3:0)
+    lw 	    t1, 0xa0(t0)
+    or	    t1, 3
+    xor     t1, 2
+    sw      t1, 0xa0(t0)
+#endif
+	li	t1, 0x11100000
 	sw	t1, 0x10(t0)
 
 	dli	t0, 0x9000000000000000
@@ -519,7 +551,14 @@ li	t1, 0x11100000
 	or	t1, t1, t2
 	sw	t1, 0x78(t0)
 
-li	t1, 0x11200000
+#if defined(FORCE_PCIE_GEN1) && FORCE_PCIE_GEN1 & 4
+//pcie capability link control 2, target link speed(bit 3:0)
+    lw 	    t1, 0xa0(t0)
+    or	    t1, 3
+    xor     t1, 2
+    sw      t1, 0xa0(t0)
+#endif
+	li	t1, 0x11200000
 	sw	t1, 0x10(t0)
 
 	dli	t0, 0x9000000000000000
@@ -556,6 +595,13 @@ li	t1, 0x11200000
 	or	t1, t1, t2
 	sw	t1, 0x78(t0)
 
+#if defined(FORCE_PCIE_GEN1) && FORCE_PCIE_GEN1 & 8
+//pcie capability link control 2, target link speed(bit 3:0)
+    lw 	    t1, 0xa0(t0)
+    or	    t1, 3
+    xor     t1, 2
+    sw      t1, 0xa0(t0)
+#endif
 	li	t1, 0x11300000
 	sw	t1, 0x10(t0)
 
@@ -563,11 +609,11 @@ li	t1, 0x11200000
 	li      t1, 0x11300000
 	or	t0, t0, t1
 
-    	li  t1, (0x7<<18)|(0x7<<2)
-    	not t1, t1
-    	lw  t2, 0x54(t0)
-    	and t2, t2, t1
-    	sw  t2, 0x54(t0)
+    li  t1, (0x7<<18)|(0x7<<2)
+    not t1, t1
+    lw  t2, 0x54(t0)
+    and t2, t2, t1
+    sw  t2, 0x54(t0)
 
     lw  t2, 0x58(t0)
     and t2, t2, t1
@@ -583,19 +629,85 @@ pcie_cfg_done:
 	PRINTSTR("\r\ninitserial good ^_^...\r\n")
 	nop
 
-	bal	ls2k_version
-	nop
-	bnez	v0,2f
-	nop
-
-2:
 	bal 	initserial_later
 	nop
 
-	bal	ls2k_version
-	nop
+#if 1 /* Config SATA : use internel clock */
+	li	t0, 0xbfe10000
 
-2:
+    	li      t1, 0x30c31cf9
+    	sw      t1, 0x454(t0)
+    	li      t1, 0xf300040f
+    	sw      t1, 0x450(t0)
+
+#if 1
+	PRINTSTR("\r\nUSE internel SATA ref clock\r\n")
+	li	t1, 0xbfe10450
+	ld	a0, 0x0(t1)
+	li	a1, 0x2
+	not	a1, a1
+	and	a0, a0, a1
+	sd	a0, 0x0(t1)
+	sync
+
+	ld	a0, 0x0(t1)
+	li	a1, 0x4
+    or  a0, a1
+	sd	a0, 0x0(t1)
+	sync
+
+	ld	a0, 0x0(t1)
+	li	a1, 0x8
+    or  a0, a1
+	sd	a0, 0x0(t1)
+	sync
+
+	ld	a0, 0x0(t1)
+	bal	hexserial64
+	nop
+#endif
+#endif
+
+#if 1 /* Config SATA TX signal*/
+        li      t0, 0xbfe10458
+        dli     t1, 0x1403f1002
+        sd      t1, 0x0(t0)
+#endif
+
+
+#if 1 // Fix the Gmac0  multi-func to enable Gmac1
+	li	t0, 0xbfe13800
+	dli	a0, 0xffffff0000ffffff
+	sd	a0, 0x08(t0)
+
+	li	t0, 0xba001800
+	li	a0, 0x0080ff08
+	sw	a0, 0x0c(t0)
+#endif
+
+#if 1 // Set the invalid BAR to read only
+	li	t0, 0xbfe13800
+	dli	a0, 0xff00ff0000fffff0
+	sd	a0, 0x00(t0)
+	sd	a0, 0x08(t0)
+	sd	a0, 0x10(t0)
+	sd	a0, 0x18(t0)
+	sd	a0, 0x20(t0)
+	sd	a0, 0x28(t0)
+	sd	a0, 0x30(t0)
+	sd	a0, 0x38(t0)
+	sd	a0, 0x40(t0)
+	sd	a0, 0x48(t0)
+	sd	a0, 0x50(t0)
+#endif
+
+start_now:
+
+	PRINTSTR("\r\nPMON2000 MIPS Initializing. Standby...\r\n")
+
+	bnez	s0, 1f
+	nop
+	li	a0, 128
 
 .global wait_for_smp;
 .global wait_for_smp_call;
@@ -627,6 +739,49 @@ wait_for_smp_call:
 	jr	t1
 	nop
 
+LEAF(outstring)
+	move	a2, ra
+	move	a1, a0
+	lbu	a0, 0(a1)
+1:
+	beqz	a0, 2f
+	nop
+	bal	tgt_putchar
+	addiu	a1, 1
+	b	1b
+	lbu	a0, 0(a1)
+
+2:
+	j	a2
+	nop
+END(outstring)
+
+LEAF(hexserial)
+	move	a2, ra
+	move	a1, a0
+	li	a3, 7
+1:
+	rol	a0, a1, 4
+	move	a1, a0
+	and	a0, 0xf
+	la	v0, hexchar
+	addu	v0, s0
+	addu	v0, a0
+#ifdef BOOT_FROM_NAND
+#ifdef NAND_ECC_MODE
+	addiu   v0, v0,0x400 
+#endif
+#endif
+	bal	tgt_putchar
+	lbu	a0, 0(v0)
+
+	bnez	a3, 1b
+	addu	a3, -1
+
+	j	a2
+	nop
+END(hexserial)
+
 LEAF(ls2k_version)
 	.set    mips32
 	li a0,0xbfc00000+ NVRAM_OFFS
@@ -650,6 +805,38 @@ LEAF(ls2k_version)
 2:
 	j	ra
 	nop
+END(outstring)
+__main:
+	j	ra
+	nop
+
+	.rdata
+transmit_pat_msg:
+	.asciz	"\r\nInvalid transmit pattern.  Must be DDDD or DDxDDx\r\n"
+v200_msg:
+	.asciz	"\r\nPANIC! Unexpected TLB refill exception!\r\n"
+v280_msg:
+	.asciz	"\r\nPANIC! Unexpected XTLB refill exception!\r\n"
+v380_msg:
+	.asciz	"\r\nPANIC! Unexpected General exception!\r\n"
+v400_msg:
+	.asciz	"\r\nPANIC! Unexpected Interrupt exception!\r\n"
+hexchar:
+	.ascii	"0123456789abcdef"
+
+	.text
+	.align	2
+
+#define Index_Store_Tag_D			0x09
+#define Index_Invalidate_I			0x00
+#define Index_Writeback_Inv_D			0x01
+#define Index_Writeback_Inv_S			0x01//delete scache  
+#define Index_Store_Tag_S			0x0B 
+
+LEAF(nullfunction)
+	jr ra
+	nop
+END(nullfunction)
 
 LEAF(tlb_init)
         mtc0    $0, CP0_WIRED
@@ -798,3 +985,16 @@ LEAF(tgt_putchar)
 	nop
 	.set at
 END(tgt_putchar)
+
+LEAF(hexserial64)
+	move	t7, ra
+	move	t6, a0
+	dsrl	a0, 32
+	bal	hexserial
+	nop
+	move	a0, t6
+	bal	hexserial
+	nop
+	jr	t7
+	nop
+END(hexserial64)

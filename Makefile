@@ -13,7 +13,7 @@ LD = $(CROSS_COMPILE)ld
 QEMU = ~/loongson/emu/qemu/build/mips64el-softmmu/qemu-system-mips64el
 
 C_FLAGS = -mabi=32 -mno-abicalls -D_LOCORE -G 0 -mips3 -Wall -fno-strict-aliasing -I ./include/ -c -fno-builtin -fno-stack-protector -nostdinc -fno-pic -gdwarf-2 -g
-LD_FLAGS = -T ./script/ld.script -nostdlib -m elf32ltsmip -G 0 -static -n -N
+LD_FLAGS = -T ./script/ld.script -e start -nostdlib -m elf32ltsmip -G 0 -static -n -N
 
 all: $(S_OBJECTS) $(C_OBJECTS) link
 
@@ -34,8 +34,8 @@ clean:
 	$(RM) $(S_OBJECTS) $(C_OBJECTS) kernel.bin
 
 .PHONY:qemu
-qemu: all
-	$(QEMU) -M ls2k -m 4G -smp 1 --nographic -bios ./kernel.bin
+qemu:
+	$(QEMU) -M ls2k -m 4G -smp 1 -nographic -bios ./kernel.bin
 
-gdb: all
-	$(QEMU) -M ls2k -m 4G -smp 1 --nographic -bios ./kernel.bin -S -s
+gdb:
+	$(QEMU) -M ls2k -m 4G -smp 1 -nographic -bios ./kernel.bin -s -S
