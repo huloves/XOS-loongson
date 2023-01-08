@@ -782,6 +782,22 @@ LEAF(hexserial)
 	nop
 END(hexserial)
 
+LEAF(stringserial)
+	move	a2, ra
+	addu	a1, a0, s0
+	lbu	a0, 0(a1)
+1:
+	beqz	a0, 2f
+	nop
+	bal	tgt_putchar
+	addiu	a1, 1
+	b	1b
+	lbu	a0, 0(a1)
+2:
+	j	a2
+	nop
+END(stringserial)
+
 LEAF(ls2k_version)
 	.set    mips32
 	li a0,0xbfc00000+ NVRAM_OFFS
@@ -865,28 +881,6 @@ tlb_flush_all:
 	nop
 END(tlb_init)
 
-LEAF(watchdog_close)
-	//disable watch DOG.
-	/*gpio 3 output zero*/
-	li t1,0xbfe10500
-
-	li t2,(1 << 3)
-	not t2,t2
-	lw t3,0x0(t1)
-	and t2,t3
-	sw t2,0x0(t1)
-
-	li t2,(1 << 3)
-	lw t3,0x10(t1)
-	not t2,t2
-	and t2,t3
-	sw t2,0x10(t1)
-	nop
-
-	jr		ra
-	nop
-END(watchdog_close)
-
 LEAF(initserial)
 	.set noat
 	move 	AT,ra
@@ -949,22 +943,6 @@ LEAF(initserial_later)
 	.set at
 END(initserial_later)
 
-LEAF(stringserial)
-	move	a2, ra
-	addu	a1, a0, s0
-	lbu	a0, 0(a1)
-1:
-	beqz	a0, 2f
-	nop
-	bal	tgt_putchar
-	addiu	a1, 1
-	b	1b
-	lbu	a0, 0(a1)
-2:
-	j	a2
-	nop
-END(stringserial)
-
 LEAF(tgt_putchar)
 	.set noat
 	move	AT, ra
@@ -998,3 +976,25 @@ LEAF(hexserial64)
 	jr	t7
 	nop
 END(hexserial64)
+
+LEAF(watchdog_close)
+	//disable watch DOG.
+	/*gpio 3 output zero*/
+	li t1,0xbfe10500
+
+	li t2,(1 << 3)
+	not t2,t2
+	lw t3,0x0(t1)
+	and t2,t3
+	sw t2,0x0(t1)
+
+	li t2,(1 << 3)
+	lw t3,0x10(t1)
+	not t2,t2
+	and t2,t3
+	sw t2,0x10(t1)
+	nop
+
+	jr		ra
+	nop
+END(watchdog_close)

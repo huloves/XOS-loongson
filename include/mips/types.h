@@ -39,7 +39,6 @@ typedef __signed__ short 	__s16;
 typedef unsigned short 		__u16;
 
 typedef __signed__ int 		__s32;
-typedef unsigned int 		__u32;
 // typedef __kernel_ssize_t	ssize_t;
 #define true 1
 #define false 0
@@ -63,5 +62,17 @@ typedef unsigned short umode_t;
 
 // typedef __kernel_off_t		off_t;
 // typedef __kernel_ino_t		ino_t;
+
+/*
+ * Basic integral types.  Omit the typedef if
+ * not possible for a machine/compiler combination.
+ */
+#define	__BIT_TYPES_DEFINED__
+typedef	unsigned char		 u_int8_t;
+typedef	unsigned short		u_int16_t;
+typedef	unsigned int		u_int32_t;
+/* LONGLONG */
+/* LONGLONG */
+typedef	unsigned long long	u_int64_t;
 
 #endif /* _MIPS_TYPES_H */
