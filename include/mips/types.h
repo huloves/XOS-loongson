@@ -75,4 +75,8 @@ typedef	unsigned int		u_int32_t;
 /* LONGLONG */
 typedef	unsigned long long	u_int64_t;
 
+typedef unsigned char  u_char;
+typedef unsigned short u_short;
+typedef unsigned long  u_long;
+
 #endif /* _MIPS_TYPES_H */

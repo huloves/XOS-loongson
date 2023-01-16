@@ -1,0 +1,11 @@
+#include <string.h>
+#include <ctype.h>
+
+void
+strtoupper(char *p)
+{
+	if(!p)
+		return;
+	for (; *p; p++)
+		*p = toupper (*p);
+}
