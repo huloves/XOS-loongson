@@ -708,6 +708,9 @@ start_now:
 	bnez	s0, 1f
 	nop
 	li	a0, 128
+	la	v0, initmips
+	jr	v0
+	nop
 
 .global wait_for_smp;
 .global wait_for_smp_call;

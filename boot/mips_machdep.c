@@ -1,3 +1,6 @@
+#include <stdio.h>
+#include <mips/types.h>
+
 /*for toolchain mips-elf-gcc mips3 use 32 fpu regs*/
 void tgt_fpuenable()
 {
