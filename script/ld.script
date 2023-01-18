@@ -4,7 +4,7 @@ OUTPUT_ARCH(mips)
 ENTRY(_start)
 SECTIONS
 {
-  . = 0xffffffff8f00000;
+  . = 0xffffffff8f900000;
   .text :
   {
     _ftext = . ;

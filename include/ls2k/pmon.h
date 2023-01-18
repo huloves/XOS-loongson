@@ -12,4 +12,9 @@ void tgt_putchar(int);
 int	atob(u_int32_t *, char *, int);
 char	*btoa(char *, u_int32_t, int32_t);
 
+/*
+ *  Target dependent functions
+ */
+void		tgt_reboot (void);
+
 #endif /* __PMON_H */

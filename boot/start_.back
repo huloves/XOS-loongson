@@ -1,10 +1,13 @@
+#ifndef _KERNEL
+#define _KERNEL
+#endif
+
 #include <ls2k/ls2k.h>
 #include <ls2k/regdef.h>
 #include <ls2k/bonito.h>
 #include <ls2k/ns16550.h>
 #include <mips/asm.h>
 #include <mips/cpu.h>
-#include <mips/pte.h>
 
 #define TTYDEBUG
 #ifdef TTYDEBUG
@@ -77,24 +80,6 @@
 
 #endif
 
-
-
-
-/*
- *   Register usage:
- *
- *	s0	link versus load offset, used to relocate absolute adresses.
- *	s1	free
- *	s2	memory size.
- *	s3	sdShape.
- *	s4	Bonito base address.
- *	s5	dbg.
- *	s6	sdCfg.
- *	s7	rasave.
- *	s8	L3 Cache size.
- */
-
-
 #ifdef BOOT_FROM_NAND
 
 #define Index_Store_Tag_D			0x09
@@ -123,11 +108,8 @@
 _start:
 start:
 	.globl	stack
-	/* 设置栈指针为start地址之前的0x4000 */
 stack = start - 0x4000		/* Place PMON stack below PMON start in RAM */
 	/*set all spi cs to 1, default input*/
-	/* 设置spi配置寄存器 0xbfff0225 = 0x1fff0220 + 0xa0000000 + 5，所以是片选寄存器*/
-	/* 将spi配置空间中的片选寄存器设置为0xff */
 	li v0,0xbfff0225
 	li v1,0xff
 	sb v1,(v0)
@@ -170,20 +152,12 @@ stack = start - 0x4000		/* Place PMON stack below PMON start in RAM */
 
 	/* init processor state at first*/
 /* NOTE!! Not more that 16 instructions here!!! Right now it's FULL! */
-	/* 清零cp0 status寄存器 */
 	mtc0	zero, COP_0_STATUS_REG //cuckoo
-	/* 清零cp0 cause寄存器 */
 	mtc0	zero, COP_0_CAUSE_REG
-
-	/**
-	 * 设置启动异常向量入口地址为ROM地址(0xbfc00000)
-	 * 将寄存器cp0 status的BEV置1，使CPU采用ROM(kseg1)空间的异常入口点
-	*/
-	/* SR_BOOT_EXC_VEC = 0x00400000 */
 	li	t0, SR_BOOT_EXC_VEC	/* Exception to Boostrap Location */
-	mtc0	t0, COP_0_STATUS_REG //cuckoo   /* 0x00400000 给 SR(BEV)置1 CPU 使用 kseg1 作为入口点 */
+	mtc0	t0, COP_0_STATUS_REG //cuckoo
 
-	bal     initregs
+//        bal     initregs
         nop
 
 	.set	mips32
@@ -198,7 +172,7 @@ stack = start - 0x4000		/* Place PMON stack below PMON start in RAM */
 	/* spi speedup */
 	li  t0, 0xbfff0220
 	li  t1, 0x47
-	sb  t1, 0x4(t0)   /* 设置spi参数控制寄存器，时钟分频数设置为4，快速读模式，连续地址读模式，SPI flash读使能*/
+	sb  t1, 0x4(t0)
 
 	bal	locate			/* Get current execute address */
 	nop
@@ -206,285 +180,6 @@ stack = start - 0x4000		/* Place PMON stack below PMON start in RAM */
 uncached:
 	or	ra, UNCACHED_MEMORY_ADDR
 	j	ra
-	nop
-
-/*
- *  Reboot vector usable from outside pmon.
- */
-	.align	8
-ext_map_and_reboot:
-	bal	CPU_TLBClear
-	nop
-
-	li	a0, 0xc0000000
-	li	a1, 0x40000000
-	bal	CPU_TLBInit
-	nop
-	la	v0, tgt_reboot
-	la	v1, start
-	subu	v0, v1
-	lui	v1, 0xffc0
-	addu	v0, v1
-	jr	v0
-	nop
-
-/*
- *  Exception vectors here for rom, before we are up and running. Catch
- *  whatever comes up before we have a fully fledged exception handler.
- */
-	.align	9			/* bfc00200 */
-	move	k0, ra		#save ra
-	la	a0, v200_msg
-	bal	stringserial
-	nop
-	b	exc_common
-
-	.align	7			/* bfc00280 */
-	move	k0, ra	#save ra
-	la	a0, v280_msg
-	bal	stringserial
-	nop
-	b	exc_common
-
-/* Cache error */
-	.align	8			/* bfc00300 */
-	PRINTSTR("\r\nPANIC! Unexpected Cache Error exception! ")
-	mfc0	a0, COP_0_CACHE_ERR
-	bal	hexserial
-	nop
-	b	exc_common
-
-/* General exception */
-	.align	7			/* bfc00380 */
-	move	k0, ra		#save ra
-	la	a0, v380_msg
-	bal	stringserial
-	nop
-	b	exc_common
-
-	.align	8			/* bfc00400 */
-	move	k0, ra		#save ra
-	la	a0, v400_msg
-	bal	stringserial
-	nop
-
-#if 1
-	b	exc_common
-	nop
-#endif
-
-	.align 8           /* bfc00500 */
-	.set mips64
-
-
-	/* store ra and sp to memory */
-	dli t0, 0x900000000faaa040
-	sd  a0, 0x0(t0) //store ra
-
-	dli t1, 0x900000000faaa048
-	sd  a1, 0x0(t1) //store sp
-
-	dli t2, 0x900000000faaa050
-	dli t0, 0x5a5a5a5a5a5a5a5a
-	sd  t0, 0x0(t2) //store str flag
-
-	.set mips3
-	la  s0, start
-	li  a0, 0xbfc00000
-	subu    s0, a0, s0
-	and s0, 0xffff0000
-
-1:  	li v1,0x100
-	subu    v1, v1, 0x1
-	nop
-
-1:  	lui t0, 0xbfe1  /* Enable DDR control register  */
-	ld  t1, 0x0420(t0)
-	nop
-	dli t2, (0x1 << 41)
-	or t1, t1, t2
-	sd  t1, 0x0420(t0)
-
-	dli t2, ~(0x1 << 40)
-	and t1, t1, t2
-	sd  t1, 0x0420(t0)
-	sync
-
-	.set mips64
-	li  a0,0x0
-	dli t0, 0x900000001fe10000
-
-	STR_XBAR_CONFIG_NODE_a0(0x10, \
-			0x0000000000000000, \
-			0xfffffffff0000000, \
-			0x00000000000000f0)
-
-	dli a0, 0x900000000ff00000
-	ld  t1, 0x198(a0)
-	dli t3, 0x0000000f00000000
-	or  t1, t1, t3  /* bit32 for self refresh*/
-	sd  t1, 0x198(a0)
-	sync
-
-	/* Don't forget to recovery the XbarII config Window */
-	li  a0,0x0
-	dli t0, 0x900000001fe10000
-	STR_XBAR_CONFIG_NODE_a0(0x10, \
-			0x0000000000000000, \
-			0xfffffffff0000000, \
-			0x00000000000000f0)
-	sync
-	sync
-	sync
-	sync
-	sync
-
-	/* delay */
-	//li  t0, 0x400000
-	li  t0, 0x40
-	1:
-	subu    t0, t0, 0x1
-	bnez    t0, 1b
-	nop
-
-	li  t0,0xbfe07000
-	/* set key,usb,gmac wakeup of reg GPE0_EN */
-	lw  t1, 0x2c(t0)
-	li  t3, (0x1 << 8)|(0x3f<<10)|(0x1<<6)|(0x1<<5)
-	or  t1, t1, t3
-	sw  t1, 0x2c(t0)
-
-	/* set USB_GMAC_OK of reg PMCON_RESUME */
-	lw  t1, 0x04(t0)
-	li  t3, (0x1<<7)
-	or  t1, t1, t3
-	sw  t1, 0x04(t0)
-
-	/* set WOL_BAT_EN of reg PMCON_RTC */
-	lw  t1, 0x08(t0)
-	li  t3, (0x1<<7)
-	or  t1, t1, t3
-	sw  t1, 0x08(t0)
-
-	/* clear 0-15 of reg GPE0_STS */
-	lw  t1, 0x28(t0)
-	li  t3, 0x0000ffff
-	sw  t3, 0x28(t0)
-
-	/*clean acpi wake status*/
-	lw t1, 0x0c(t0)
-	li t3, 0x8100
-	sw t3, 0x0c(t0)
-
-	/*clean acpi pwrbtn staus*/
-	lw t1, 0x10(t0)
-	li t3, (0x1 << 8)
-	or t1, t1, t3
-	sw t1, 0x10(t0)
-
-	PRINTSTR("\nSystem Enter S3!!!\n")
-
-	/* enable acpi porbtn and set acpi alptype is S3 status*/
-	lw t1, 0x14(t0)
-	li t3, 0x3400
-	sw t3, 0x14(t0)
-	nop
-
-	/* delay */
-	li t0, 0x4000
-	2:
-	subu t0, t0, 0x1
-	bnez t0, 2b
-	nop
-
-	1:
-	b 1b
-	nop
-
-	/* Debug exception */
-	.align  7           /* bfc00480 */
-exc_common:
-	PRINTSTR("\r\nCAUSE=")
-	mfc0	a0, COP_0_CAUSE_REG
-	bal	hexserial
-	nop
-	PRINTSTR("\r\nSTATUS=")
-	mfc0	a0, COP_0_STATUS_REG
-	bal	hexserial
-	nop
-	PRINTSTR("\r\nERRORPC=")
-	mfc0	a0, COP_0_ERROR_PC
-	bal	hexserial
-	nop
-	PRINTSTR("\r\nEPC=")
-	mfc0	a0, COP_0_EXC_PC
-	bal	hexserial
-	nop
-1:
-    	b	1b
-    	nop
-	PRINTSTR("\r\nDERR0=")
-	cfc0	a0, COP_0_DERR_0
-	bal	hexserial
-	nop
-	PRINTSTR("\r\nDERR1=")
-	cfc0	a0, COP_0_DERR_1
-	bal	hexserial
-	nop
-
-//	b	ext_map_and_reboot
-	nop
-
-	.align 8
-		nop
-	.align 8
-	.word vsprintf
-
-	move    a1, $0;
-
-initregs:
-        ## init registers
-        move    $1, $0
-        move    $2, $0
-        move    $3, $0
-        move    $4, $0
-        move    $5, $0
-        move    $6, $0
-        move    $7, $0
-        move    $8, $0
-        move    $9, $0
-        move    $10, $0
-        move    $11, $0
-        move    $12, $0
-        move    $13, $0
-        move    $14, $0
-        move    $15, $0
-        move    $16, $0
-        move    $17, $0
-        move    $18, $0
-        move    $19, $0
-        move    $20, $0
-        move    $21, $0
-        move    $22, $0
-        move    $23, $0
-        move    $24, $0
-        move    $25, $0
-        move    $26, $0
-        move    $27, $0
-        move    $28, $0
-        move    $29, $0
-        move    $30, $0
-
-	/* now begin initial float CP1 register */
-        ## float point
-
-        mfc0    t0, CP0_STATUS
-        li	t1, 0x64000000|SR_KX|SR_SX|SR_UX|SR_BOOT_EXC_VEC
-        or      t0, t0, t1
-        mtc0    t0, CP0_STATUS
-	la	sp, stack
-	la	gp, _gp   /* 加载全局指针_gp，定义在ld.script */
-	jr	ra
 	nop
 
 /*
@@ -502,8 +197,62 @@ locate:
 	mtc0	t0, CP0_STATUS
 	mtc0	zero, COP_0_CAUSE_REG
 
+#ifdef LOWPOWER
+	la v0, start + NVRAM_OFFS + SHUTDEV_OFFS
+	addu v0, s0
+	//li v0, 0xbfc00000 + NVRAM_OFFS + SHUTDEV_OFFS
+	lbu t1, 3(v0)
+	xor t1, 0x5a
+	bnez t1, 1f
+	nop
+	lbu t3, 2(v0)
+	and t3, 2
+	beqz t3, 1f
+	nop
+        .set    mips64
+        mfc0    t0, $15, 1      #EBASE
+	.set	mips0
+        andi    t0, t0, 0x3ff
+
+wait_to_be_killed:
+	bnez	t0, wait_to_be_killed
+	nop
+
+	li	v0, 0xbfe104d4
+	lw	t2, 0x0(v0)
+	or	t2, 3
+	xor	t2, 2
+	sw	t2, 0x0(v0)
+1:
+#elif defined(RESERVED_COREMASK)
+        .set    mips64
+        mfc0    t0, $15, 1      #EBASE
+	.set	mips0
+        andi    t0, t0, 0x3ff
+
+	li	t1, 0x1
+	sllv	t1, t1, t0
+	and	t3, t1, RESERVED_COREMASK
+	bnez	t3, wait_to_be_killed
+	nop
+
+	li	v0, 0xbfe104d4
+	lw	t2, 0x0(v0)
+	or	t2, 3
+	xori	t2, RESERVED_COREMASK
+	sw	t2, 0x0(v0)
+	
+	b	cp0_main
+	nop
+
+wait_to_be_killed:
+
+	b	wait_to_be_killed
+	nop
+#endif
+
 cp0_main:
-	.set    mips32
+        .set    mips32
         mfc0    t0, $15, 1      #EBASE
         .set    mips3
         andi    t0, t0, 0x3ff
@@ -518,6 +267,42 @@ cp0_main:
 	or	t2, 0xc00
 	sw	t2, 0x0(t0)
 
+#ifdef GPIO_PINS
+	li	v0, 0xbfe10420
+	ld	v1, (v0)
+	dli	a0, LS2K_SELGPIO
+	or	v1, a0
+	xor	v1, a0
+	sd	v1, (v0)
+#endif
+
+#ifdef GPIO_OUT_PINS
+	li v0, 0xbfe10500
+	ld v1, (v0)
+	dli a0, GPIO_OUT_PINS
+	or v1, a0
+	xor v1, a0
+	sd v1, (v0)
+#endif
+
+#ifdef GPIO_OUT_CLR
+	li v0, 0xbfe10500
+	ld v1, 0x10(v0)
+	dli a0, GPIO_OUT_CLR
+	or v1, a0
+	xor v1, a0
+	sd v1, 0x10(v0)
+#endif
+
+#ifdef GPIO_OUT_SET
+	li v0, 0xbfe10500
+	ld v1, 0x10(v0)
+	dli a0, GPIO_OUT_SET
+	or v1, a0
+	sd v1, 0x10(v0)
+#endif
+
+
 	lui	t0, 0xba00
 	lui	t1, 0x1fe0
 	sw	t1, 0x1010(t0) /* config bar for APB */
@@ -525,10 +310,43 @@ cp0_main:
 	ori	t2, t2, 0x2
 	sw	t2, 0x1004(t0)
 
+#ifdef I2CGPIO_INIT
+	//i2cs 1 0x24;m1 0x11 0xff;i2cs 1 0x30;m1 0xff 0xff'
+	li a0, 0xbfe01800
+	bal i2c_ls2k_init
+	nop
+
+	/*read i2cgpio, skip write if nack*/
+	li a0, 0xbfe01800
+	li a1, 0x1148
+	bal i2c_ls2k_read
+	nop
+	bnez v1, 1f
+	nop
+
+	li a0, 0xbfe01800
+	li a1, 0xff1148
+	bal i2c_ls2k_write
+	nop
+	li a1, 0xff0060
+	bal i2c_ls2k_write
+	nop
+	li a1, 0xffff60
+	bal i2c_ls2k_write
+	nop
+1:
+#endif
+
+
 	bal 	tlb_init
 	nop
 
+#ifndef BOOT_FROM_EJTAG
+#ifdef HS0636
 	bal	HS0636_beep_on
+#else
+	bal	beep_on
+#endif
 	nop
 	li	a0, 0x8000
 1:
@@ -538,7 +356,24 @@ cp0_main:
 	nop
 	bal	beep_off//mtf
 	nop
+#endif
 
+
+#ifdef LOWPOWER
+	la v0, start + NVRAM_OFFS + SHUTDEV_OFFS
+	addu v0, s0
+	//li v0, 0xbfc00000 + NVRAM_OFFS + SHUTDEV_OFFS
+	lbu t1, 3(v0)
+	xor t1, 0x5a
+	bnez t1, 1f
+	nop
+	lbu t1, 0(v0)
+	and t1, 0xc
+	xor t1, 0xc
+	beqz t1, pcie_cfg_done
+	nop
+1:
+#endif
 #if 1	//xwr pcie signal test
         li      t0, 0xbfe10000
 
@@ -878,88 +713,6 @@ pcie_cfg_done:
 loop_:
 	b loop_
 
-	bal 	initserial_later
-	nop
-
-#if 1 /* Config SATA : use internel clock */
-	li	t0, 0xbfe10000
-
-    	li      t1, 0x30c31cf9
-    	sw      t1, 0x454(t0)
-    	li      t1, 0xf300040f
-    	sw      t1, 0x450(t0)
-
-#if 1
-	PRINTSTR("\r\nUSE internel SATA ref clock\r\n")
-	li	t1, 0xbfe10450
-	ld	a0, 0x0(t1)
-	li	a1, 0x2
-	not	a1, a1
-	and	a0, a0, a1
-	sd	a0, 0x0(t1)
-	sync
-
-	ld	a0, 0x0(t1)
-	li	a1, 0x4
-    or  a0, a1
-	sd	a0, 0x0(t1)
-	sync
-
-	ld	a0, 0x0(t1)
-	li	a1, 0x8
-    or  a0, a1
-	sd	a0, 0x0(t1)
-	sync
-
-	ld	a0, 0x0(t1)
-	bal	hexserial64
-	nop
-#endif
-#endif
-
-#if 1 /* Config SATA TX signal*/
-        li      t0, 0xbfe10458
-        dli     t1, 0x1403f1002
-        sd      t1, 0x0(t0)
-#endif
-
-
-#if 1 // Fix the Gmac0  multi-func to enable Gmac1
-	li	t0, 0xbfe13800
-	dli	a0, 0xffffff0000ffffff
-	sd	a0, 0x08(t0)
-
-	li	t0, 0xba001800
-	li	a0, 0x0080ff08
-	sw	a0, 0x0c(t0)
-#endif
-
-#if 1 // Set the invalid BAR to read only
-	li	t0, 0xbfe13800
-	dli	a0, 0xff00ff0000fffff0
-	sd	a0, 0x00(t0)
-	sd	a0, 0x08(t0)
-	sd	a0, 0x10(t0)
-	sd	a0, 0x18(t0)
-	sd	a0, 0x20(t0)
-	sd	a0, 0x28(t0)
-	sd	a0, 0x30(t0)
-	sd	a0, 0x38(t0)
-	sd	a0, 0x40(t0)
-	sd	a0, 0x48(t0)
-	sd	a0, 0x50(t0)
-#endif
-
-start_now:
-
-	PRINTSTR("\r\nPMON2000 MIPS Initializing. Standby...\r\n")
-
-	bnez	s0, 1f
-	nop
-	li	a0, 128
-	la	v0, initmips
-	jr	v0
-	nop
 
 .global wait_for_smp;
 .global wait_for_smp_call;
@@ -991,65 +744,25 @@ wait_for_smp_call:
 	jr	t1
 	nop
 
-LEAF(CPU_TLBClear)
-	li	a3, 0			# First TLB index.
-
-	li	a2, PG_SIZE_4K
-	MTC0	a2, COP_0_TLB_PG_MASK   # Whatever...
-
-1:
-	MTC0	zero, COP_0_TLB_HI	# Clear entry high.
-	MTC0	zero, COP_0_TLB_LO0	# Clear entry low0.
-	MTC0	zero, COP_0_TLB_LO1	# Clear entry low1.
-
-	mtc0	a3, COP_0_TLB_INDEX	# Set the index.
-	addiu	a3, 1
-	li	a2, 64
-	nop
-	nop
-	tlbwi				# Write the TLB
-
-	bne	a3, a2, 1b
-	nop
-
-	jr	ra
-	nop
-END(CPU_TLBClear)
-
 /*
- *  Set up the TLB. Normally called from start.S.
+ * Simple character printing routine used before full initialization
  */
-LEAF(CPU_TLBInit)
-	li	a3, 0			# First TLB index.
 
-	li	a2, PG_SIZE_16M
-	MTC0	a2, COP_0_TLB_PG_MASK   # All pages are 16Mb.
-
+LEAF(stringserial)
+	move	a2, ra
+	addu	a1, a0, s0
+	lbu	a0, 0(a1)
 1:
-	and	a2, a0, PG_SVPN
-	MTC0	a2, COP_0_TLB_HI	# Set up entry high.
-
-	move	a2, a0
-	srl	a2, a0, PG_SHIFT 
-	and	a2, a2, PG_FRAME
-	ori	a2, PG_IOPAGE
-	MTC0	a2, COP_0_TLB_LO0	# Set up entry low0.
-	addu	a2, (0x01000000 >> PG_SHIFT)
-	MTC0	a2, COP_0_TLB_LO1	# Set up entry low1.
-
-	mtc0    a3, COP_0_TLB_INDEX	# Set the index.
-	addiu	a3, 1
-	li	a2, 0x02000000
-	subu	a1, a2
+	beqz	a0, 2f
 	nop
-	tlbwi				# Write the TLB
-
-	bgtz	a1, 1b
-	addu	a0, a2			# Step address 32Mb.
-
-	jr	ra
+	bal	tgt_putchar
+	addiu	a1, 1
+	b	1b
+	lbu	a0, 0(a1)
+2:
+	j	a2
 	nop
-END(CPU_TLBInit)
+END(stringserial)
 
 LEAF(outstring)
 	move	a2, ra
@@ -1067,48 +780,6 @@ LEAF(outstring)
 	j	a2
 	nop
 END(outstring)
-
-LEAF(hexserial)
-	move	a2, ra
-	move	a1, a0
-	li	a3, 7
-1:
-	rol	a0, a1, 4
-	move	a1, a0
-	and	a0, 0xf
-	la	v0, hexchar
-	addu	v0, s0
-	addu	v0, a0
-#ifdef BOOT_FROM_NAND
-#ifdef NAND_ECC_MODE
-	addiu   v0, v0,0x400 
-#endif
-#endif
-	bal	tgt_putchar
-	lbu	a0, 0(v0)
-
-	bnez	a3, 1b
-	addu	a3, -1
-
-	j	a2
-	nop
-END(hexserial)
-
-LEAF(stringserial)
-	move	a2, ra
-	addu	a1, a0, s0
-	lbu	a0, 0(a1)
-1:
-	beqz	a0, 2f
-	nop
-	bal	tgt_putchar
-	addiu	a1, 1
-	b	1b
-	lbu	a0, 0(a1)
-2:
-	j	a2
-	nop
-END(stringserial)
 
 LEAF(ls2k_version)
 	.set    mips32
@@ -1134,37 +805,7 @@ LEAF(ls2k_version)
 	j	ra
 	nop
 END(outstring)
-__main:
-	j	ra
-	nop
 
-	.rdata
-transmit_pat_msg:
-	.asciz	"\r\nInvalid transmit pattern.  Must be DDDD or DDxDDx\r\n"
-v200_msg:
-	.asciz	"\r\nPANIC! Unexpected TLB refill exception!\r\n"
-v280_msg:
-	.asciz	"\r\nPANIC! Unexpected XTLB refill exception!\r\n"
-v380_msg:
-	.asciz	"\r\nPANIC! Unexpected General exception!\r\n"
-v400_msg:
-	.asciz	"\r\nPANIC! Unexpected Interrupt exception!\r\n"
-hexchar:
-	.ascii	"0123456789abcdef"
-
-	.text
-	.align	2
-
-#define Index_Store_Tag_D			0x09
-#define Index_Invalidate_I			0x00
-#define Index_Writeback_Inv_D			0x01
-#define Index_Writeback_Inv_S			0x01//delete scache  
-#define Index_Store_Tag_S			0x0B 
-
-LEAF(nullfunction)
-	jr ra
-	nop
-END(nullfunction)
 
 LEAF(tlb_init)
         mtc0    $0, CP0_WIRED
@@ -1192,8 +833,26 @@ tlb_flush_all:
 	jr ra
 	nop
 END(tlb_init)
-
-LEAF(initserial)
+###############################
+LEAF(smh_flush_dcache)
+	li	a0, 0x80000000
+	li	a1, (1<<14)
+        addu    v0, $0, a0
+        addu    v1, a0, a1
+1:      slt     a3, v0, v1
+        beq     a3, $0, 1f
+        nop
+        cache   0x01, 0x0(v0)   // Index_Writeback_Inv_D
+        cache   0x01, 0x1(v0)
+        cache   0x01, 0x2(v0)
+        cache   0x01, 0x3(v0)
+        beq     $0, $0, 1b
+        addiu   v0, v0, 0x20
+	jr	ra
+	nop
+END(smh_flush_dcache)
+	
+	LEAF(initserial)
 	.set noat
 	move 	AT,ra
 
@@ -1276,20 +935,44 @@ LEAF(tgt_putchar)
 	.set at
 END(tgt_putchar)
 
-LEAF(hexserial64)
-	move	t7, ra
-	move	t6, a0
-	dsrl	a0, 32
-	bal	hexserial
+LEAF(tgt_testchar)
+	.set noat
+	move	AT, ra
+        la      v0, COM1_BASE_ADDR
+	bal	1f
 	nop
-	move	a0, t6
-	bal	hexserial
+	jr	AT
 	nop
-	jr	t7
-	nop
-END(hexserial64)
+1:
+        lbu     v1, NSREG(NS16550_LSR)(v0)
+        and     v0, v1, LSR_RXRDY
+        jr	ra
+        nop
+	.set	at
+END(tgt_testchar)
 
+LEAF(tgt_getchar)
+	.set	noat
+	move	AT, ra
+	la	v0, COM1_BASE_ADDR
+	bal	1f
+	nop
+	jr	AT
+	nop
+1:
+	lbu	v1, NSREG(NS16550_LSR)(v0)
+	and	v1, LSR_RXRDY
+	beqz	v1, 1b
+	nop
+	lb	v0, NSREG(NS16550_DATA)(v0)
+	jr ra
+	nop
+	.set at
+END(tgt_getchar)
+
+#ifndef BEEP_GPIO
 #define BEEP_GPIO 39
+#endif
 
 LEAF(HS0636_beep_on)
 //enable output
@@ -1373,6 +1056,7 @@ LEAF(beep_off)
 	jr	ra
 	nop
 END(beep_off)
+
 
 LEAF(watchdog_close)
 	//disable watch DOG.
